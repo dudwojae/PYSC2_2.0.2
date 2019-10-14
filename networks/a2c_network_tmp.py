@@ -31,26 +31,26 @@ class A2CNet(nn.Module):
             self._initialize_embeddings(self.player_specs, self._embed_player_fn)
 
         # Initialize layers (screen, minimap, player)
-        self.screen_conv = nn.DataParallel(nn.Sequential(
-            nn.DataParallel(nn.Conv2d(self.num_screens, 16, 5, stride=1, padding=2)),
+        self.screen_conv = nn.Sequential(
+            nn.Conv2d(self.num_screens, 16, 5, stride=1, padding=2),
             nn.ReLU(),
-            nn.DataParallel(nn.Conv2d(16, 32, 3, stride=1, padding=1)),
-            nn.ReLU()))
+            nn.Conv2d(16, 32, 3, stride=1, padding=1),
+            nn.ReLU())
 
-        self.minimap_conv = nn.DataParallel(nn.Sequential(
-            nn.DataParallel(nn.Conv2d(self.num_minimaps, 16, 5, stride=1, padding=2)),
+        self.minimap_conv = nn.Sequential(
+            nn.Conv2d(self.num_minimaps, 16, 5, stride=1, padding=2),
             nn.ReLU(),
-            nn.DataParallel(nn.Conv2d(16, 32, 3, stride=1, padding=1)),
-            nn.ReLU()))
+            nn.Conv2d(16, 32, 3, stride=1, padding=1),
+            nn.ReLU())
 
-        self.player_conv = nn.DataParallel(nn.Sequential(
-            nn.DataParallel(nn.Linear(75 * arglist.FEAT2DSIZE * arglist.FEAT2DSIZE, 256)),
-            nn.ReLU()))
+        self.player_conv = nn.Sequential(
+            nn.Linear(75 * arglist.FEAT2DSIZE * arglist.FEAT2DSIZE, 256),
+            nn.ReLU())
 
-        self.value_op = nn.DataParallel(nn.Linear(256, 1))
-        self.action_op = nn.DataParallel(nn.Sequential(
+        self.value_op = nn.Linear(256, 1)
+        self.action_op = nn.Sequential(
             nn.Linear(256, arglist.NUM_ACTIONS),
-            nn.Softmax(dim=1)))
+            nn.Softmax(dim=1))
 
         self.non_spatial_outputs = self._initialize_non_spatial_actions(256)
         self.spatial_outputs = self._initialize_spatial_actions(75)
@@ -113,11 +113,11 @@ class A2CNet(nn.Module):
 
     def _embed_spatial_fn(self, in_, out_):
         '''1 * 1 2D convolution for spatial features.'''
-        return nn.DataParallel(nn.Conv2d(in_, out_, 1, stride=1, padding=0))
+        return nn.Conv2d(in_, out_, 1, stride=1, padding=0)
 
     def _embed_player_fn(self, in_, out_):
         '''Linear transform for player features'''
-        return nn.DataParallel(nn.Linear(in_, out_))
+        return nn.Linear(in_, out_)
 
     def _initialize_embeddings(self, specs, embed_fn):
         """
@@ -136,9 +136,9 @@ class A2CNet(nn.Module):
                 out_size = np.round(np.log2(spec.scale)).astype(np.int32).item()
                 out_size = np.max((out_size, 1))
                 out_size_total += out_size
-                embeddings[spec.index] = nn.DataParallel(nn.Sequential(
+                embeddings[spec.index] = nn.Sequential(
                     embed_fn(spec.scale, out_size),
-                    nn.ReLU()))
+                    nn.ReLU())
 
             elif spec.type == features.FeatureType.SCALAR:
                 out_size_total += 1
@@ -179,9 +179,9 @@ class A2CNet(nn.Module):
         out = {}
         for name, arg_type in actions.TYPES._asdict().items():
             if name not in ['screen', 'screen2', 'minimap']:
-                out[arg_type.id] = nn.DataParallel(nn.Sequential(
+                out[arg_type.id] = nn.Sequential(
                     nn.Linear(in_features, arg_type.sizes[0]),
-                    nn.Softmax(dim=1)))
+                    nn.Softmax(dim=1))
 
         return out
 
@@ -191,10 +191,10 @@ class A2CNet(nn.Module):
         out = {}
         for name, arg_type in actions.TYPES._asdict().items():
             if name in ['screen', 'screen2', 'minimap']:
-                out[arg_type.id] = nn.DataParallel(nn.Sequential(
+                out[arg_type.id] = nn.Sequential(
                     nn.Conv2d(in_channels, 1, 1, stride=1, padding=0),
                     Flatten(),
-                    nn.Softmax(dim=1)))
+                    nn.Softmax(dim=1))
 
         return out
 
